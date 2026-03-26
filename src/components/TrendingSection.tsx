@@ -55,7 +55,7 @@ export function TrendingSection({
                 idx === 0 ? "row-span-4 lg:col-span-3" : "row-span-3 lg:col-span-3"
               ].join(" ")}
             >
-              <div className="absolute right-3 top-3 rounded-full bg-rose-500/20 px-2 py-1 text-[11px] font-semibold text-rose-100 ring-1 ring-rose-500/30 backdrop-blur">
+              <div className="absolute right-3 top-3 rounded-full bg-amber-500/20 px-2 py-1 text-[11px] font-semibold text-amber-100 ring-1 ring-amber-500/30 backdrop-blur">
                 Trending
               </div>
               <Thumbnail
@@ -75,7 +75,7 @@ export function TrendingSection({
               </div>
               <div className="mt-1 flex items-center justify-between gap-2">
                 <p className="text-xs text-slate-400">Views/day</p>
-                <p className="text-xs font-semibold text-sky-200">
+                <p className="text-xs font-semibold text-amber-200">
                   {formatNumber(v.viewsPerDay)}
                 </p>
               </div>

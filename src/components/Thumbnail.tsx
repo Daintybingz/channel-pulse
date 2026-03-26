@@ -18,7 +18,7 @@ export function Thumbnail({
     return (
       <div
         className={[
-          "flex items-center justify-center rounded bg-gradient-to-br from-slate-800 to-slate-900 text-[11px] font-semibold text-slate-200 ring-1 ring-white/10",
+          "flex items-center justify-center rounded bg-gradient-to-br from-amber-900 to-orange-900 text-[11px] font-semibold text-slate-200 ring-1 ring-white/10",
           className ?? ""
         ].join(" ")}
         aria-label={alt ?? "Thumbnail"}

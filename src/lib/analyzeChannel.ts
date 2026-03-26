@@ -1,5 +1,6 @@
 import type { AnalyzeResponse, Video } from "@/lib/types";
 import { daysSince, viewsPerDay } from "@/lib/metrics";
+import https from "node:https";
 
 type AnalyzeInput = {
   channelUrl: string;
@@ -84,17 +85,34 @@ function extractChannelLookup(channelUrl: string): { channelId?: string; query?:
   }
 }
 
+function httpsGet(urlStr: string): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const req = https.get(urlStr, (res) => {
+      let raw = "";
+      res.on("data", (chunk: Buffer) => { raw += chunk.toString(); });
+      res.on("end", () => {
+        try {
+          const json = JSON.parse(raw) as unknown;
+          if (typeof res.statusCode === "number" && res.statusCode >= 400) {
+            reject(new Error(`YouTube API error (${res.statusCode}): ${raw.slice(0, 200)}`));
+          } else {
+            resolve(json);
+          }
+        } catch {
+          reject(new Error(`YouTube API: invalid JSON response`));
+        }
+      });
+    });
+    req.on("error", reject);
+    req.setTimeout(15000, () => { req.destroy(new Error("YouTube API request timed out")); });
+  });
+}
+
 async function youtubeJson(apiKey: string, path: string, params: Record<string, string>) {
   const url = new URL(`https://www.googleapis.com/youtube/v3/${path}`);
   url.searchParams.set("key", apiKey);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-
-  const res = await fetch(url.toString(), { method: "GET" });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`YouTube API error (${res.status}): ${text.slice(0, 200)}`);
-  }
-  return (await res.json()) as unknown;
+  return httpsGet(url.toString());
 }
 
 async function resolveChannel(apiKey: string, channelUrl: string): Promise<YtSearchChannelResult> {
@@ -258,64 +276,112 @@ export async function analyzeChannel(input: AnalyzeInput): Promise<AnalyzeRespon
   const channelId = channelKey.replace(/^(channel:|handle:)/, "");
   const channelName = `Channel ${channelId.slice(0, 8)}`;
 
-  // Demo-friendly fallback: mock-first when no API key is configured.
-  if (!apiKey) {
+  function buildMockResponse(warning?: string): AnalyzeResponse {
     const videos = makeMockVideos(channelUrl, rangeDays, now);
     const trending = [...videos].sort((a, b) => b.viewsPerDay - a.viewsPerDay).slice(0, 5);
-    return { channelName, channelId, generatedAt: now.toISOString(), trending, videos };
+    return {
+      channelName,
+      channelId,
+      generatedAt: now.toISOString(),
+      trending,
+      videos,
+      source: "mock",
+      warning
+    };
+  }
+
+  // Demo-friendly fallback: mock-first when no API key is configured.
+  if (!apiKey) {
+    return buildMockResponse();
   }
 
   // Real integration path (YouTube Data API v3).
-  const resolved = await resolveChannel(apiKey, channelUrl);
+  // If anything fails (quota, network, key restrictions), we fall back to mock data
+  // so the demo UI never breaks.
+  let resolvedName = channelName;
+  let resolvedId = channelId;
 
-  const channelDetails = (await youtubeJson(apiKey, "channels", {
-    part: "contentDetails",
-    id: resolved.channelId
-  })) as {
-    items?: Array<{
-      contentDetails?: { relatedPlaylists?: { uploads?: string } };
-    }>;
-  };
+  try {
+    const resolved = await resolveChannel(apiKey, channelUrl);
+    resolvedName = resolved.channelTitle ?? channelName;
+    resolvedId = resolved.channelId;
 
-  const uploadsPlaylistId = channelDetails.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
-  if (!uploadsPlaylistId) throw new Error("Could not locate uploads playlist for this channel.");
+    const channelDetails = (await youtubeJson(apiKey, "channels", {
+      part: "contentDetails",
+      id: resolved.channelId
+    })) as {
+      items?: Array<{
+        contentDetails?: { relatedPlaylists?: { uploads?: string } };
+      }>;
+    };
 
-  const videoIds = await fetchRecentUploadVideoIds(apiKey, uploadsPlaylistId, rangeDays, now);
-  const details = await fetchVideoDetails(apiKey, videoIds);
+    const uploadsPlaylistId =
+      channelDetails.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+    if (!uploadsPlaylistId) {
+      throw new Error("Could not locate uploads playlist for this channel.");
+    }
 
-  const videos: Video[] = details
-    .map((v) => {
-      const viewsRaw = Number(v.statistics.viewCount ?? 0);
-      const likesRaw = Number(v.statistics.likeCount ?? 0);
-      const publishedAt = v.snippet.publishedAt;
-      const thumb =
-        v.snippet.thumbnails?.high?.url ??
-        v.snippet.thumbnails?.medium?.url ??
-        v.snippet.thumbnails?.default?.url ??
-        `https://placehold.co/240x135/png?text=${encodeURIComponent(v.id)}`;
+    const videoIds = await fetchRecentUploadVideoIds(apiKey, uploadsPlaylistId, rangeDays, now);
+    const details = await fetchVideoDetails(apiKey, videoIds);
 
-      return {
-        id: v.id,
-        title: v.snippet.title,
-        thumbnailUrl: thumb,
-        views: Number.isFinite(viewsRaw) ? viewsRaw : 0,
-        likes: Number.isFinite(likesRaw) ? likesRaw : 0,
-        publishedAt,
-        daysSinceUpload: daysSince(publishedAt, now),
-        viewsPerDay: viewsPerDay(Number.isFinite(viewsRaw) ? viewsRaw : 0, publishedAt, now)
-      };
-    })
-    .filter((v) => daysSince(v.publishedAt, now) <= rangeDays);
+    const videos: Video[] = details
+      .map((v) => {
+        const viewsRaw = Number(v.statistics.viewCount ?? 0);
+        const likesRaw = Number(v.statistics.likeCount ?? 0);
+        const publishedAt = v.snippet.publishedAt;
+        const thumb =
+          v.snippet.thumbnails?.high?.url ??
+          v.snippet.thumbnails?.medium?.url ??
+          v.snippet.thumbnails?.default?.url ??
+          `https://placehold.co/240x135/png?text=${encodeURIComponent(v.id)}`;
 
-  videos.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
-  const trending = [...videos].sort((a, b) => b.viewsPerDay - a.viewsPerDay).slice(0, 5);
+        return {
+          id: v.id,
+          title: v.snippet.title,
+          thumbnailUrl: thumb,
+          views: Number.isFinite(viewsRaw) ? viewsRaw : 0,
+          likes: Number.isFinite(likesRaw) ? likesRaw : 0,
+          publishedAt,
+          daysSinceUpload: daysSince(publishedAt, now),
+          viewsPerDay: viewsPerDay(
+            Number.isFinite(viewsRaw) ? viewsRaw : 0,
+            publishedAt,
+            now
+          )
+        };
+      })
+      .filter((v) => daysSince(v.publishedAt, now) <= rangeDays);
 
-  return {
-    channelName: resolved.channelTitle ?? channelName,
-    channelId: resolved.channelId,
-    generatedAt: now.toISOString(),
-    trending,
-    videos
-  };
+    videos.sort(
+      (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+    );
+    const trending = [...videos].sort((a, b) => b.viewsPerDay - a.viewsPerDay).slice(0, 5);
+
+    return {
+      channelName: resolvedName,
+      channelId: resolvedId,
+      generatedAt: now.toISOString(),
+      trending,
+      videos,
+      source: "youtube"
+    };
+  } catch (err) {
+    const message =
+      err instanceof Error && err.message
+        ? err.message
+        : "YouTube API request failed.";
+
+    // eslint-disable-next-line no-console
+    console.error("YouTube integration failed; falling back to mock data:", message);
+
+    const mock = buildMockResponse(`YouTube API unavailable: ${message}`);
+    // Ensure channel identity matches resolved values when possible.
+    return {
+      ...mock,
+      channelName: resolvedName,
+      channelId: resolvedId,
+      source: "mock"
+    };
+  }
 }
 

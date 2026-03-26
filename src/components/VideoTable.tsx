@@ -80,7 +80,7 @@ export function VideoTable({
               onChange={(e) =>
                 setSortKey(e.target.value as "views" | "viewsPerDay" | "uploadDate")
               }
-              className="ml-1 rounded-lg border border-white/10 bg-slate-900/40 px-2 py-1 text-xs text-slate-100 outline-none transition focus:border-sky-500/60 focus:ring-2 focus:ring-sky-500/20"
+              className="ml-1 rounded-lg border border-white/10 bg-slate-900/40 px-2 py-1 text-xs text-slate-100 outline-none transition focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20"
             >
               <option value="views">Views</option>
               <option value="viewsPerDay">Views per day</option>
@@ -158,7 +158,7 @@ export function VideoTable({
                   <td className="px-4 py-3 text-right text-sm text-slate-200">
                     {formatDate(v.publishedAt)}
                   </td>
-                  <td className="px-4 py-3 text-right text-sm font-semibold text-sky-200">
+                  <td className="px-4 py-3 text-right text-sm font-semibold text-amber-200">
                     {formatNumber(v.viewsPerDay)}
                   </td>
                 </tr>

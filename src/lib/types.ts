@@ -15,5 +15,7 @@ export type AnalyzeResponse = {
   generatedAt: string;
   trending: Video[];
   videos: Video[];
+  source: "mock" | "youtube";
+  warning?: string;
 };
 

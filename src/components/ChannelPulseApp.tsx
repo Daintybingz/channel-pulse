@@ -7,6 +7,7 @@ import { TrendingSection } from "@/components/TrendingSection";
 import { VideoTable } from "@/components/VideoTable";
 import { InsightsBox } from "@/components/InsightsBox";
 import { ViewsPerDayChart } from "@/components/ViewsPerDayChart";
+import { TopKeywords } from "@/components/TopKeywords";
 
 type RangeDays = 7 | 30;
 
@@ -60,16 +61,16 @@ export function ChannelPulseApp() {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-3 pb-16 pt-6 sm:px-4 sm:pt-8">
-      <header className="mb-5 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-r from-fuchsia-500/10 via-indigo-500/10 to-sky-500/10 p-5 sm:mb-6 sm:p-6">
+      <header className="mb-5 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-r from-amber-300/20 via-orange-400/20 to-yellow-300/20 p-5 sm:mb-6 sm:p-6">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-300">
+          <p className="text-base font-extrabold uppercase tracking-[0.22em] text-amber-200">
             ChannelPulse
           </p>
-          <h1 className="mt-2 text-2xl font-bold text-white sm:text-4xl">
-            Discover what is surging, Pinterest-style
+          <h1 className="mt-2 text-2xl font-bold text-white sm:text-3xl">
+            Discover what is surging
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-300">
-            Paste a channel URL and browse a visual trend board of top-performing uploads based on{" "}
+            Paste a channel URL and browse top-performing uploads ranked by{" "}
             <span className="font-semibold text-slate-100">views per day</span>.
           </p>
         </div>
@@ -114,8 +115,8 @@ export function ChannelPulseApp() {
                   className={[
                     "min-h-11 rounded-xl border px-3 py-2 text-xs font-semibold transition",
                     rangeDays === 7
-                      ? "border-sky-500/60 bg-sky-500/15 text-sky-200"
-                      : "border-white/10 bg-slate-900/30 text-slate-200 hover:bg-slate-900/40"
+                      ? "border-amber-500/60 bg-amber-500/15 text-amber-200"
+                      : "border-white/10 bg-slate-900/30 text-slate-200 hover:border-amber-500/30 hover:bg-amber-500/10"
                   ].join(" ")}
                 >
                   Last 7 days
@@ -131,8 +132,8 @@ export function ChannelPulseApp() {
                   className={[
                     "min-h-11 rounded-xl border px-3 py-2 text-xs font-semibold transition",
                     rangeDays === 30
-                      ? "border-sky-500/60 bg-sky-500/15 text-sky-200"
-                      : "border-white/10 bg-slate-900/30 text-slate-200 hover:bg-slate-900/40"
+                      ? "border-amber-500/60 bg-amber-500/15 text-amber-200"
+                      : "border-white/10 bg-slate-900/30 text-slate-200 hover:border-amber-500/30 hover:bg-amber-500/10"
                   ].join(" ")}
                 >
                   Last 30 days
@@ -152,7 +153,13 @@ export function ChannelPulseApp() {
         <section className="space-y-5">
           {data ? (
             <>
+              {data.warning ? (
+                <div className="rounded-3xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+                  {data.warning}
+                </div>
+              ) : null}
               <TrendingSection videos={data.trending} loading={loading} />
+              <TopKeywords videos={data.videos} />
               <ViewsPerDayChart videos={data.videos} />
               <InsightsBox videos={data.videos} rangeDays={rangeDays} />
             </>
