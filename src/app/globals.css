@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Keep focus rings subtle but accessible for a SaaS look. */
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+}
+
