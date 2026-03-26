@@ -9,3 +9,13 @@
   }
 }
 
+@layer utilities {
+  .cp-card {
+    @apply transition-all duration-300 ease-out;
+  }
+
+  .cp-card-hover {
+    @apply hover:-translate-y-0.5 hover:shadow-xl hover:shadow-black/20;
+  }
+}
+

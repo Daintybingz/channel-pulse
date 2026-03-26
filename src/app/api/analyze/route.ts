@@ -26,9 +26,11 @@ export async function POST(req: Request) {
 
     return NextResponse.json(result, { status: 200 });
   } catch (err) {
+    const message =
+      err instanceof Error && err.message ? err.message.slice(0, 300) : "Failed to analyze channel.";
     return NextResponse.json(
-      { error: "Failed to analyze channel." },
-      { status: 500 }
+      { error: message },
+      { status: 502 }
     );
   }
 }

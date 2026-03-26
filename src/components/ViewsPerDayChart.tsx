@@ -33,7 +33,7 @@ export function ViewsPerDayChart({ videos }: { videos: Video[] }) {
   }, [series]);
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
+    <section className="rounded-3xl border border-white/10 bg-white/5 p-4 sm:p-5">
       <h2 className="text-base font-semibold text-slate-100">Performance trend</h2>
       <p className="mt-1 text-xs text-slate-400">Views per day across recent uploads</p>
 
@@ -41,7 +41,7 @@ export function ViewsPerDayChart({ videos }: { videos: Video[] }) {
         {series.length === 0 ? (
           <div className="p-4 text-sm text-slate-300">No data to plot.</div>
         ) : (
-          <svg viewBox="0 0 520 160" className="h-[160px] w-full">
+          <svg viewBox="0 0 520 160" className="h-[150px] w-full sm:h-[160px]">
             <defs>
               <linearGradient id="cpLine" x1="0" x2="1">
                 <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.9" />

@@ -59,33 +59,24 @@ export function ChannelPulseApp() {
   }, [rangeDays]);
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 pb-16 pt-10">
-      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="mx-auto w-full max-w-7xl px-3 pb-16 pt-6 sm:px-4 sm:pt-8">
+      <header className="mb-5 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-r from-fuchsia-500/10 via-indigo-500/10 to-sky-500/10 p-5 sm:mb-6 sm:p-6">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-sky-300">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-300">
             ChannelPulse
           </p>
-          <h1 className="mt-2 text-3xl font-bold text-white">
-            Find YouTube videos with real momentum
+          <h1 className="mt-2 text-2xl font-bold text-white sm:text-4xl">
+            Discover what is surging, Pinterest-style
           </h1>
-          <p className="mt-2 max-w-xl text-sm text-slate-300">
-            Paste a channel URL and instantly get a trending shortlist based on{" "}
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-300">
+            Paste a channel URL and browse a visual trend board of top-performing uploads based on{" "}
             <span className="font-semibold text-slate-100">views per day</span>.
           </p>
         </div>
-
-        {activeChannelUrl ? (
-          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-            <p className="text-xs text-slate-400">Analyzing</p>
-            <p className="text-sm font-semibold text-slate-100 line-clamp-1">
-              {activeChannelUrl}
-            </p>
-          </div>
-        ) : null}
       </header>
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_430px]">
-        <div className="space-y-5 lg:order-2">
+      <div className="grid gap-4 sm:gap-5 lg:grid-cols-[340px_1fr]">
+        <aside className="space-y-5 lg:sticky lg:top-6 lg:self-start">
           <ChannelInput
             value={channelUrl}
             onChange={setChannelUrl}
@@ -104,14 +95,14 @@ export function ChannelPulseApp() {
             }}
           />
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+            <div className="flex flex-col gap-3">
               <div>
-                <h2 className="text-base font-semibold text-slate-100">Time filter</h2>
+                <h2 className="text-base font-semibold text-slate-100">Content window</h2>
                 <p className="mt-1 text-xs text-slate-400">Currently: {filterSummary}</p>
               </div>
 
-              <div className="flex gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   disabled={loading}
@@ -121,7 +112,7 @@ export function ChannelPulseApp() {
                     if (activeChannelUrl) void analyze(activeChannelUrl, next);
                   }}
                   className={[
-                    "rounded-xl border px-3 py-2 text-xs font-semibold transition",
+                    "min-h-11 rounded-xl border px-3 py-2 text-xs font-semibold transition",
                     rangeDays === 7
                       ? "border-sky-500/60 bg-sky-500/15 text-sky-200"
                       : "border-white/10 bg-slate-900/30 text-slate-200 hover:bg-slate-900/40"
@@ -138,7 +129,7 @@ export function ChannelPulseApp() {
                     if (activeChannelUrl) void analyze(activeChannelUrl, next);
                   }}
                   className={[
-                    "rounded-xl border px-3 py-2 text-xs font-semibold transition",
+                    "min-h-11 rounded-xl border px-3 py-2 text-xs font-semibold transition",
                     rangeDays === 30
                       ? "border-sky-500/60 bg-sky-500/15 text-sky-200"
                       : "border-white/10 bg-slate-900/30 text-slate-200 hover:bg-slate-900/40"
@@ -149,9 +140,16 @@ export function ChannelPulseApp() {
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="space-y-5 lg:order-1">
+          {activeChannelUrl ? (
+            <div className="rounded-3xl border border-white/10 bg-white/5 px-4 py-3">
+              <p className="text-xs text-slate-400">Analyzing</p>
+              <p className="line-clamp-2 text-sm font-semibold text-slate-100">{activeChannelUrl}</p>
+            </div>
+          ) : null}
+        </aside>
+
+        <section className="space-y-5">
           {data ? (
             <>
               <TrendingSection videos={data.trending} loading={loading} />
@@ -159,7 +157,7 @@ export function ChannelPulseApp() {
               <InsightsBox videos={data.videos} rangeDays={rangeDays} />
             </>
           ) : (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8">
               <h2 className="text-base font-semibold text-slate-100">
                 Ready when you are
               </h2>
@@ -167,7 +165,7 @@ export function ChannelPulseApp() {
                 Paste a channel link and hit <span className="font-semibold">Analyze</span>. We’ll compute{" "}
                 <span className="font-semibold text-slate-100">views per day</span> and show trending uploads.
               </p>
-              <div className="mt-5 rounded-xl border border-dashed border-white/10 bg-slate-950/20 p-4">
+              <div className="mt-5 rounded-2xl border border-dashed border-white/10 bg-slate-950/20 p-4">
                 <p className="text-xs text-slate-400">
                   Tip: For best results, use a channel URL like:
                 </p>
@@ -177,7 +175,7 @@ export function ChannelPulseApp() {
               </div>
             </div>
           )}
-        </div>
+        </section>
       </div>
 
       <div className="mt-5">

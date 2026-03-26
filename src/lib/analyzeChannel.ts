@@ -292,7 +292,7 @@ export async function analyzeChannel(input: AnalyzeInput): Promise<AnalyzeRespon
         v.snippet.thumbnails?.high?.url ??
         v.snippet.thumbnails?.medium?.url ??
         v.snippet.thumbnails?.default?.url ??
-        "";
+        `https://placehold.co/240x135/png?text=${encodeURIComponent(v.id)}`;
 
       return {
         id: v.id,

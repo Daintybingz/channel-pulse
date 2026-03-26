@@ -57,7 +57,7 @@ export function InsightsBox({
   if (!insights) return null;
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
+    <section className="rounded-3xl border border-white/10 bg-white/5 p-4 sm:p-5">
       <h2 className="text-base font-semibold text-slate-100">{insights.title}</h2>
       <ul className="mt-3 space-y-2">
         {insights.lines.map((line, idx) => (
