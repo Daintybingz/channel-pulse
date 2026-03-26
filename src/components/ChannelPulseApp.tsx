@@ -61,17 +61,20 @@ export function ChannelPulseApp() {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-3 pb-16 pt-6 sm:px-4 sm:pt-8">
-      <header className="mb-5 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-r from-amber-300/20 via-orange-400/20 to-yellow-300/20 p-5 sm:mb-6 sm:p-6">
+      <header className="mb-5 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-r from-amber-300/20 via-orange-400/20 to-yellow-300/20 p-5 sm:mb-6 sm:p-8">
         <div>
-          <p className="text-base font-extrabold uppercase tracking-[0.22em] text-amber-200">
+          <h1
+            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            className="bg-gradient-to-r from-amber-300 via-yellow-300 to-orange-400 bg-clip-text text-4xl font-bold leading-none tracking-tight text-transparent sm:text-5xl"
+          >
             ChannelPulse
-          </p>
-          <h1 className="mt-2 text-2xl font-bold text-white sm:text-3xl">
-            Discover what is surging
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-300">
+          <p className="mt-3 text-base font-medium text-slate-300 sm:text-lg">
+            Discover what is surging
+          </p>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
             Paste a channel URL and browse top-performing uploads ranked by{" "}
-            <span className="font-semibold text-slate-100">views per day</span>.
+            <span className="font-semibold text-slate-200">views per day</span>.
           </p>
         </div>
       </header>
