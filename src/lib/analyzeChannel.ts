@@ -8,6 +8,28 @@ type AnalyzeInput = {
   apiKey?: string;
 };
 
+type YtSearchChannelResult = {
+  channelId: string;
+  channelTitle?: string;
+};
+
+type YtVideoRaw = {
+  id: string;
+  snippet: {
+    title: string;
+    publishedAt: string;
+    thumbnails?: {
+      high?: { url: string };
+      medium?: { url: string };
+      default?: { url: string };
+    };
+  };
+  statistics: {
+    viewCount?: string;
+    likeCount?: string;
+  };
+};
+
 function hashString(input: string): number {
   // Simple deterministic hash for mock data.
   let h = 2166136261;
@@ -42,6 +64,135 @@ function extractChannelKey(channelUrl: string): string {
   } catch {
     return channelUrl.trim();
   }
+}
+
+function extractChannelLookup(channelUrl: string): { channelId?: string; query?: string } {
+  try {
+    const normalized = channelUrl.startsWith("http")
+      ? channelUrl
+      : `https://www.youtube.com/${channelUrl.replace(/^\/+/, "")}`;
+    const u = new URL(normalized);
+    const parts = u.pathname.split("/").filter(Boolean);
+    if (parts[0] === "channel" && parts[1]?.startsWith("UC")) return { channelId: parts[1] };
+    if (parts[0]?.startsWith("@")) return { query: parts[0] };
+    if (parts[0] === "@" && parts[1]) return { query: `@${parts[1]}` };
+    if (parts[0] === "c" && parts[1]) return { query: parts[1] };
+    if (parts[0] === "user" && parts[1]) return { query: parts[1] };
+    return { query: channelUrl.trim() };
+  } catch {
+    return { query: channelUrl.trim() };
+  }
+}
+
+async function youtubeJson(apiKey: string, path: string, params: Record<string, string>) {
+  const url = new URL(`https://www.googleapis.com/youtube/v3/${path}`);
+  url.searchParams.set("key", apiKey);
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+
+  const res = await fetch(url.toString(), { method: "GET" });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`YouTube API error (${res.status}): ${text.slice(0, 200)}`);
+  }
+  return (await res.json()) as unknown;
+}
+
+async function resolveChannel(apiKey: string, channelUrl: string): Promise<YtSearchChannelResult> {
+  const lookup = extractChannelLookup(channelUrl);
+  if (lookup.channelId) {
+    const channels = (await youtubeJson(apiKey, "channels", {
+      part: "snippet",
+      id: lookup.channelId,
+      maxResults: "1"
+    })) as { items?: Array<{ id: string; snippet?: { title?: string } }> };
+
+    const item = channels.items?.[0];
+    return {
+      channelId: lookup.channelId,
+      channelTitle: item?.snippet?.title
+    };
+  }
+
+  // Fallback: search for the channel by provided handle/username.
+  const q = lookup.query ?? channelUrl.trim();
+  const search = (await youtubeJson(apiKey, "search", {
+    part: "snippet",
+    type: "channel",
+    q,
+    maxResults: "1"
+  })) as { items?: Array<{ id?: { channelId?: string }; snippet?: { channelTitle?: string } }> };
+
+  const item = search.items?.[0];
+  const channelId = item?.id?.channelId;
+  if (!channelId) throw new Error("Could not resolve channel ID from provided URL.");
+
+  return { channelId, channelTitle: item.snippet?.channelTitle };
+}
+
+async function fetchRecentUploadVideoIds(apiKey: string, uploadsPlaylistId: string, rangeDays: 7 | 30, now: Date) {
+  // For MVP simplicity, fetch a few pages (max 200 items) then filter by publishedAt.
+  const videoIds = new Set<string>();
+  const maxPages = 4;
+
+  let pageToken: string | undefined;
+  for (let page = 0; page < maxPages; page++) {
+    const params: Record<string, string> = {
+      part: "snippet,contentDetails",
+      playlistId: uploadsPlaylistId,
+      maxResults: "50",
+      order: "date"
+    };
+    if (pageToken) params.pageToken = pageToken;
+
+    const resp = (await youtubeJson(apiKey, "playlistItems", params)) as {
+      items?: Array<{
+        snippet?: { publishedAt?: string };
+        contentDetails?: { videoId?: string };
+      }>;
+      nextPageToken?: string;
+    };
+
+    const items = resp.items ?? [];
+    for (const it of items) {
+      const publishedAt = it.snippet?.publishedAt;
+      const vid = it.contentDetails?.videoId;
+      if (!publishedAt || !vid) continue;
+      if (daysSince(publishedAt, now) <= rangeDays) videoIds.add(vid);
+    }
+
+    const nextToken = resp.nextPageToken;
+    if (!nextToken) break;
+
+    // Stop early if the whole page is outside the range (depends on ordering, but works well enough).
+    const allOld = items.length > 0 && items.every((it) => {
+      const publishedAt = it.snippet?.publishedAt;
+      if (!publishedAt) return true;
+      return daysSince(publishedAt, now) > rangeDays;
+    });
+    if (allOld && videoIds.size > 0) break;
+
+    pageToken = nextToken;
+  }
+
+  return [...videoIds];
+}
+
+async function fetchVideoDetails(apiKey: string, videoIds: string[]): Promise<YtVideoRaw[]> {
+  const out: YtVideoRaw[] = [];
+  const batches = Math.ceil(videoIds.length / 50);
+  for (let i = 0; i < batches; i++) {
+    const slice = videoIds.slice(i * 50, i * 50 + 50);
+    if (slice.length === 0) continue;
+
+    const resp = (await youtubeJson(apiKey, "videos", {
+      part: "snippet,statistics",
+      id: slice.join(","),
+      maxResults: "50"
+    })) as { items?: YtVideoRaw[] };
+
+    out.push(...(resp.items ?? []));
+  }
+  return out;
 }
 
 function makeISODateDaysAgo(daysAgo: number, now: Date): string {
@@ -107,26 +258,61 @@ export async function analyzeChannel(input: AnalyzeInput): Promise<AnalyzeRespon
   const channelId = channelKey.replace(/^(channel:|handle:)/, "");
   const channelName = `Channel ${channelId.slice(0, 8)}`;
 
-  // MVP: default to mock until we have the YouTube API flow fully wired.
+  // Demo-friendly fallback: mock-first when no API key is configured.
   if (!apiKey) {
     const videos = makeMockVideos(channelUrl, rangeDays, now);
     const trending = [...videos].sort((a, b) => b.viewsPerDay - a.viewsPerDay).slice(0, 5);
-    return {
-      channelName,
-      channelId,
-      generatedAt: now.toISOString(),
-      trending,
-      videos
-    };
+    return { channelName, channelId, generatedAt: now.toISOString(), trending, videos };
   }
 
-  // Future: YouTube Data API integration (kept as a TODO for the MVP).
-  // For now, keep returning mock data to ensure the demo is always functional.
-  const videos = makeMockVideos(channelUrl, rangeDays, now);
+  // Real integration path (YouTube Data API v3).
+  const resolved = await resolveChannel(apiKey, channelUrl);
+
+  const channelDetails = (await youtubeJson(apiKey, "channels", {
+    part: "contentDetails",
+    id: resolved.channelId
+  })) as {
+    items?: Array<{
+      contentDetails?: { relatedPlaylists?: { uploads?: string } };
+    }>;
+  };
+
+  const uploadsPlaylistId = channelDetails.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+  if (!uploadsPlaylistId) throw new Error("Could not locate uploads playlist for this channel.");
+
+  const videoIds = await fetchRecentUploadVideoIds(apiKey, uploadsPlaylistId, rangeDays, now);
+  const details = await fetchVideoDetails(apiKey, videoIds);
+
+  const videos: Video[] = details
+    .map((v) => {
+      const viewsRaw = Number(v.statistics.viewCount ?? 0);
+      const likesRaw = Number(v.statistics.likeCount ?? 0);
+      const publishedAt = v.snippet.publishedAt;
+      const thumb =
+        v.snippet.thumbnails?.high?.url ??
+        v.snippet.thumbnails?.medium?.url ??
+        v.snippet.thumbnails?.default?.url ??
+        "";
+
+      return {
+        id: v.id,
+        title: v.snippet.title,
+        thumbnailUrl: thumb,
+        views: Number.isFinite(viewsRaw) ? viewsRaw : 0,
+        likes: Number.isFinite(likesRaw) ? likesRaw : 0,
+        publishedAt,
+        daysSinceUpload: daysSince(publishedAt, now),
+        viewsPerDay: viewsPerDay(Number.isFinite(viewsRaw) ? viewsRaw : 0, publishedAt, now)
+      };
+    })
+    .filter((v) => daysSince(v.publishedAt, now) <= rangeDays);
+
+  videos.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
   const trending = [...videos].sort((a, b) => b.viewsPerDay - a.viewsPerDay).slice(0, 5);
+
   return {
-    channelName,
-    channelId,
+    channelName: resolved.channelTitle ?? channelName,
+    channelId: resolved.channelId,
     generatedAt: now.toISOString(),
     trending,
     videos
