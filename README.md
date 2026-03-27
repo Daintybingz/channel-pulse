@@ -119,7 +119,7 @@ Content creators and marketing teams spend hours manually scrolling competitor c
 **How would i scale to paid users?**
 
 - Free tier: 5 analyses per day, 30-day window.
-- Pro ($19/mo): unlimited analyses, 90-day window, multi-channel comparison, CSV export, email digests.
+- Pro ($10/mo): unlimited analyses, 90-day window, multi-channel comparison, CSV export, email digests.
 - Team ($49/mo): shared watchlists, Slack/Notion integration, API access.
 
 Acquisition: SEO-optimised public channel report pages (e.g. `/channel/MrBeast`) that rank in Google and funnel organic traffic into signups.
@@ -138,4 +138,4 @@ I used Cursor (Claude) as a pair programmer throughout the entire build — not 
 
 **UI iteration:** I described the colour direction (mimosa, amber, orange) and the layout I had in mind (sticky left panel, right content area), and iterated on the Tailwind classes through conversation rather than trial-and-error in the browser.
 
-**What I did myself:** Every product decision — what metric matters, what the keyword feature should actually tell a user, the pricing model, the UX hierarchy — was mine. The AI was the implementation partner, not the product thinker.
+**What I did myself:** Every product decision — what metric matters, what the keyword feature should actually tell a user, the UX hierarchy — was mine. The AI was the implementation partner, not the product thinker.
