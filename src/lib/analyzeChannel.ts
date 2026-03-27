@@ -350,7 +350,7 @@ export async function analyzeChannel(input: AnalyzeInput): Promise<AnalyzeRespon
           )
         };
       })
-      .filter((v) => daysSince(v.publishedAt, now) <= rangeDays);
+      .filter((v) => daysSince(v.publishedAt, now) <= rangeDays && v.views > 0);
 
     videos.sort(
       (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
