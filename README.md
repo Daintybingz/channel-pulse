@@ -91,13 +91,13 @@ ChannelPulse is designed for fast evaluation during client meetings:
 
 I started by defining the single most useful metric a creator or competitor researcher would want — not just raw views, but *views per day*. That one formula (views ÷ days since upload) drives every ranked list in the app. Once that was clear, the component structure followed naturally: input → fetch → trending board → keyword cloud → table.
 
-**What trade-offs did I make?**
+**What trade-offs i you make?**
 
 - **Mock-first, API-second.** I built deterministic mock data before wiring the YouTube API. This meant the UI was always demo-able even when the API was broken or rate-limited — important for a founder showing a client on short notice.
 - **Client-side keyword extraction.** Rather than adding a second API call (YouTube Search or NLP service), I extract keywords directly from video titles on the client. Less accurate than a real NLP model, but zero cost, zero latency, and works offline.
 - **No database.** Every analysis is stateless and re-fetched on demand. Keeps the infra at zero cost for an MVP, at the expense of no history or caching.
 
-**What would I do differently?**
+**What would i do differently?**
 
 Cache results server-side (Redis or Vercel KV) so repeat analyses are instant and quota-friendly. I'd also pull *tags* from the YouTube API directly instead of mining titles — much cleaner signal for the keyword feature.
 
